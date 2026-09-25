@@ -2528,7 +2528,7 @@ function updateSun() {
   const night = sa < 0.06;
   lamps.forEach(l => {
     const on = S.lights === 'on' || (S.lights === 'auto' && (night || l.userData.blind));
-    l.intensity = on ? (night ? 7 : 1.4) : 0; l.castShadow = on; l.userData.bulb.material = on ? M.bulbOn : M.bulb;
+    l.intensity = on ? (night ? 10 : 2.4) : 0; l.castShadow = on; l.userData.bulb.material = on ? M.bulbOn : M.bulb;
   });
   const ledOn = S.lights !== 'off' && S.furniture;
   kitchenLeds.forEach(l => { l.intensity = ledOn ? 5 : 0; l.userData.strip.material = ledOn ? M.bulbOn : M.bulb; l.userData.strip.visible = S.furniture; });
@@ -2563,7 +2563,7 @@ const PASSAGES = [
 ];
 const probe = { cache: {}, stamp: 1, queue: [], rt: null, cam: null, pmrem: null, timer: 0 };
 const ambient = new THREE.LightProbe(); ambient.intensity = 0; scene.add(ambient);
-const REFL_K = 0.25, K_OUT = 1.25, EXP_KEY = 0.135, K_REF = 3.4;
+const REFL_K = 0.25, K_OUT = 1.45, EXP_KEY = 0.19, K_REF = 4.4;
 function invalidateProbes() {
   probe.stamp++; clearTimeout(probe.timer);
   probe.timer = setTimeout(() => { if (S.mode === 'walk') queueProbes(); }, 350);
@@ -2617,7 +2617,7 @@ function captureProbe(id) {
   scene.environment = save.env; scene.environmentIntensity = save.ei; ambient.sh.copy(save.sh); ambient.intensity = save.ai;
   // posemètre : luminance moyenne de l'éclairage reçu (terme constant des harmoniques)
   let k = { sejour: 4, chambre: 4.5, entree: 2.2, sdb: 2, wc: 2 }[id] || 3;
-  if (ok && sh) { const c0 = sh.coefficients[0], avg = 0.282095 * (0.2126 * c0.x + 0.7152 * c0.y + 0.0722 * c0.z); if (avg > 1e-5) k = clamp(EXP_KEY / avg, 0.2, 12); }
+  if (ok && sh) { const c0 = sh.coefficients[0], avg = 0.282095 * (0.2126 * c0.x + 0.7152 * c0.y + 0.0722 * c0.z); if (avg > 1e-5) k = clamp(EXP_KEY * ({ sdb: 0.6, wc: 0.6, entree: 0.8 }[id] || 1) / avg, 0.2, 12); }
   if (probe.cache[id]) probe.cache[id].env.dispose();
   probe.cache[id] = { env, sh: ok ? sh : null, k: Math.sqrt(k * K_REF), stamp: probe.stamp };
 }
