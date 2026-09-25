@@ -376,7 +376,7 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--ink)}
           <div class="g-filter"><span>Mobilier</span><div class="seg" data-key="furnished"><button data-v="1">Meublé</button><button data-v="0">Vide</button></div></div>
           <button class="g-cta" id="gStart" disabled>Lancer la visite 3D<small id="gLoad">Chargement de la 3D…</small></button>
           <div class="g-links"><button class="btn" id="gOrbit">Maquette 3D</button><button class="btn" id="gPlan">Plan 2D</button></div>
-          <p class="g-note">Images de synthèse de ton projet, calculées par lancer de rayons à partir du plan de vente (indice 0 du 16/04/2026). Aménagement et décoration indicatifs, non contractuels. Lumière du 22 septembre à 14 h 30, loggia au sud.</p>
+          <p class="g-note">Images de synthèse de ton projet, calculées à partir du plan de vente (indice 0 du 16/04/2026). Aménagement et décoration indicatifs, non contractuels. Lumière du 22 septembre à 14 h 30, loggia au sud.</p>
         </aside>
       </div>
       <div class="g-thumbs" id="gThumbs" role="list"></div>
@@ -1123,6 +1123,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 
@@ -2561,7 +2563,7 @@ const PASSAGES = [
 ];
 const probe = { cache: {}, stamp: 1, queue: [], rt: null, cam: null, pmrem: null, timer: 0 };
 const ambient = new THREE.LightProbe(); ambient.intensity = 0; scene.add(ambient);
-const REFL_K = 0.25, K_OUT = 1.25, EXP_KEY = 0.11, K_REF = 3.0;
+const REFL_K = 0.25, K_OUT = 1.25, EXP_KEY = 0.135, K_REF = 3.4;
 function invalidateProbes() {
   probe.stamp++; clearTimeout(probe.timer);
   probe.timer = setTimeout(() => { if (S.mode === 'walk') queueProbes(); }, 350);
@@ -2671,6 +2673,7 @@ function applyEnv() {
   scene.backgroundBlurriness = S.mode === 'orbit' ? 0.35 : 0;
   scene.backgroundIntensity = 1;
   renderer.toneMappingExposure = S.exposure * (walkMode ? autoExp.k : 1.0);
+  if (bloom) bloom.threshold = 1.15 / Math.max(0.2, renderer.toneMappingExposure);
 }
 
 /* ---------- Post-traitement ---------- */
@@ -2685,9 +2688,26 @@ function setupComposer() {
   gtao.updateGtaoMaterial({ radius: 0.8, distanceExponent: 2.0, thickness: 1.0, scale: 1.3, samples: 16, distanceFallOff: 1, screenSpaceRadius: false });
   gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
   composer.addPass(gtao);
+  // halo des zones très lumineuses (baies, lampes), comme sur un capteur photo
+  bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.18, 0.5, 1.0);
+  composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  // finition photo : légère courbe de contraste, vignettage, grain fin
+  photoPass = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, vig: { value: 0.22 }, grain: { value: 0.018 }, seed: { value: 0 }, contrast: { value: 0.06 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float vig, grain, seed, contrast; varying vec2 vUv;
+      float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + seed) * 43758.5453); }
+      void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 col = c.rgb;
+        col = mix(col, col * col * (3.0 - 2.0 * col), contrast);
+        vec2 d = vUv - 0.5; col *= 1.0 - vig * smoothstep(0.25, 0.85, dot(d, d) * 2.2);
+        col += (h(vUv * 1000.0) - 0.5) * grain;
+        gl_FragColor = vec4(col, c.a); }`,
+  });
+  composer.addPass(photoPass);
   gtao.enabled = S.ao;
 }
+let bloom, photoPass;
 function resize() {
   const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight;
   renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h;
@@ -3145,7 +3165,7 @@ function loop() {
   if (autoExp.snap && S.mode === 'walk' && !probe.queue.length) { applyEnv(); autoExp.k = autoExp.target; autoExp.snap = false; applyEnv(); invalidate(2); }
   if (!pt.active) {
     const tk = S.mode === 'walk' ? autoExp.target : 1;
-    if (Math.abs(tk - autoExp.k) / tk > 0.005) { autoExp.k += (tk - autoExp.k) * Math.min(1, dt * 3); renderer.toneMappingExposure = S.exposure * (S.mode === 'walk' ? autoExp.k : 1); invalidate(); } else if (autoExp.k !== tk) { autoExp.k = tk; renderer.toneMappingExposure = S.exposure * (S.mode === 'walk' ? autoExp.k : 1); invalidate(); }
+    if (Math.abs(tk - autoExp.k) / tk > 0.005) { autoExp.k += (tk - autoExp.k) * Math.min(1, dt * 3); renderer.toneMappingExposure = S.exposure * (S.mode === 'walk' ? autoExp.k : 1); if (bloom) bloom.threshold = 1.15 / Math.max(0.2, renderer.toneMappingExposure); invalidate(); } else if (autoExp.k !== tk) { autoExp.k = tk; renderer.toneMappingExposure = S.exposure * (S.mode === 'walk' ? autoExp.k : 1); invalidate(); }
   }
   if (frames > 0) { frames--; composer.render(); }
 }
