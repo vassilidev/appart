@@ -48,3 +48,8 @@ Journal des demandes de l'acquéreur et des décisions prises, dans l'ordre. Ses
 - Page d'accueil façon annonce d'agence : galerie photo avec filtres (bureau séjour ou chambre, baignoire ou douche, meublé ou vide), puis bouton « Lancer la visite 3D ».
 - Photos calculées en rendu temps réel suréchantillonné (le lancer de rayons, plus réaliste, coûte environ une seconde par passe sur cette scène).
 - Publication demandée sur GitHub Pages, dépôt public `vassilidev/appart`, avec tout l'historique et toutes les informations.
+- Rendu photo par lancer de rayons testé pour la galerie : environ une seconde par passe sur cette scène, et encore granuleux à 600 passes, même avec le débruiteur de la bibliothèque. Écarté pour la galerie, conservé comme bouton dans la visite.
+- Traitement photo ajouté au rendu temps réel : halo sur les baies et les lampes, vignettage, grain, exposition plus lumineuse.
+- Demande de l'acquéreur : visite trop sombre en mode auto. Exposition relevée dans toutes les pièces, lampes plus fortes, salle de bain et WC tempérés, galerie régénérée.
+- Barre d'outils raccourcie sur téléphone (Plan, 3D, Visite, Régl., Photos, Fiche).
+

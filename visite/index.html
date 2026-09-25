@@ -30,6 +30,8 @@
   --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); color-scheme:dark;}
 html,body{height:100%}
 [hidden]{display:none!important}
+.sm{display:none}
+@media (max-width:520px){ .lg{display:none} .sm{display:inline} .topbar{gap:5px} .topbar .btn{padding:9px 7px;font-size:13px} .topbar .modes button{font-size:13px} }
 body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.4 var(--ui);overflow:hidden;-webkit-font-smoothing:antialiased}
 button,select,input{font:inherit;color:inherit}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
@@ -291,11 +293,11 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--ink)}
 
   <div class="topbar ui">
     <div class="seg modes" role="tablist" aria-label="Mode d'affichage">
-      <button role="tab" data-mode="plan" aria-selected="false">Plan 2D</button>
-      <button role="tab" data-mode="orbit" aria-selected="true">Maquette 3D</button>
+      <button role="tab" data-mode="plan" aria-selected="false"><span class="lg">Plan 2D</span><span class="sm">Plan</span></button>
+      <button role="tab" data-mode="orbit" aria-selected="true"><span class="lg">Maquette 3D</span><span class="sm">3D</span></button>
       <button role="tab" data-mode="walk" aria-selected="false">Visite</button>
     </div>
-    <button id="btnSettings" class="btn" aria-expanded="false" aria-controls="settings">Réglages</button>
+    <button id="btnSettings" class="btn" aria-expanded="false" aria-controls="settings"><span class="lg">Réglages</span><span class="sm">Régl.</span></button>
     <button id="btnPhotos" class="btn">Photos</button>
     <button id="btnFiche" class="btn">Fiche</button>
   </div>
